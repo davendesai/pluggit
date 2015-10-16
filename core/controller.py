@@ -85,11 +85,11 @@ class RedditBotController:
 
                     try:
                         plugin = module.init(self.handler)
+                        self.plugins.append(plugin)
 
-                        if isinstance(plugin, RedditPlugin):
-                            self.plugins.append(plugin)
-                            self.logger.info('detected and loaded {} plugin'.format(plugin.name))
+                        self.logger.info('detected and loaded {} plugin'.format(plugin.name))
                     except Exception as e:
+                        self.logger.warning('an error occurred when trying to load a plugin. skipping...')
                         self.logger.warning(e)
                     
         if len(self.plugins) == 0:

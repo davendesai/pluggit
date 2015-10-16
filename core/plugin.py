@@ -48,7 +48,7 @@ class RedditPlugin():
 
         if self.plugin_config == None:
             self.logger.error('couldnt load configuration file')
-            raise Exception('failed to load plugin. skipping...')
+            raise Exception()
 
     @abstractmethod
     def act_submission(self, submission):
