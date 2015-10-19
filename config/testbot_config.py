@@ -1,4 +1,6 @@
 DEBUG = 1
 
-BOT_USERNAME = 'username'
-BOT_PASSWORD = 'password'
+SUBMISSION_SUBREDDITS = 'dota2, hearthstone'
+COMMENT_SUBREDDITS = ''
+
+USER_AGENT = 'TestBot Plugin Pre-Alpha by /u/EndeRDIT'

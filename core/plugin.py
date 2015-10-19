@@ -1,8 +1,10 @@
 import os
 import logging
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod
+from socket import error as SocketError
 
-from config import config
+import praw
+from praw.handlers import MultiprocessHandler
 
 class RedditPlugin():
     """
@@ -14,41 +16,50 @@ class RedditPlugin():
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, name, handler):
-        self.name = name
+    def __init__(self, name):
+        # Create local variables
+        self.submission_subreddits = []
+        self.comment_subreddits = []
         
         # Create plugin logger
         self.logger = logging.getLogger(name)
 
         # Load config from file
-        self.plugin_config = None
-        self.load_config(name)
+        self.config = None
 
-        # Set logging level after reading config
-        self.logger.setLevel(logging.INFO)
-        if self.plugin_config.DEBUG == 1:
+        # Create Reddit API necessities
+        self.reddit_session = None
+
+    def configure(self):
+        # DEBUG statement not strictly necessary, but would be nice...
+        if not hasattr(self.config, 'DEBUG') or self.config.DEBUG == 0:
+            self.logger.setLevel(logging.INFO)
+        else:
             self.logger.setLevel(logging.DEBUG)
+            
+        # Check for most important variables
+        assert hasattr(self.config, 'USER_AGENT'), 'unable to find user agent'
+        assert hasattr(self.config, 'SUBMISSION_SUBREDDITS'), 'unable to find submission subreddits'
+        assert hasattr(self.config, 'COMMENT_SUBREDDITS'), 'unable to find comment subreddits'
 
-    def load_config(self, name):
-        path = config.CONFIG_LOCATION
-        required = name.lower() + '_config'
+        # Create PRAW Reddit API necessities
+        self.reddit_session = praw.Reddit(user_agent = self.config.USER_AGENT)
+        
+        # Dispense subreddit information
+        subreddits = self.config.SUBMISSION_SUBREDDITS.split(',')
+        self.submission_subreddits = map(str.strip, subreddits)
+            
+        subreddits = self.config.COMMENT_SUBREDDITS.split(',')
+        self.comment_subreddits = map(str.strip, subreddits)
 
-        # Get a list of all configuration files
-        for root, dirs, files in os.walk(path):
-            for filename in files:
-                config_name, file_ext = os.path.splitext(filename)
-
-                # Filter for Python files
-                if  file_ext == '.py' and config_name == required:
-                    package = __import__(path, fromlist = [config_name])
-                    module = getattr(package, config_name)
-
-                    self.plugin_config = module
-                    return
-
-        if self.plugin_config == None:
-            self.logger.error('couldnt load configuration file')
-            raise Exception()
+    def submission_loop(self):
+        try:
+            for submission in submission_stream:
+                self.logger.debug('SUBMISSION: ' + submission.title)
+                self.act_submission(submission)
+        except Exception as e:
+            self.logger.error('unable to contact reddit API.')
+            self.logger.error(e)
 
     @abstractmethod
     def act_submission(self, submission):

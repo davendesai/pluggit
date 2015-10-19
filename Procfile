@@ -1,2 +1,2 @@
 web: bash vendor.sh
-worker: python hello_world.py
+worker: python main.py

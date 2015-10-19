@@ -1,6 +1,7 @@
-# PROJECT
+# HEROKU
 
-credentials.py
+.env
+.heroku/
 
 # PYTHON
 

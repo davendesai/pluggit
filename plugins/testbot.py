@@ -2,14 +2,14 @@ from core.plugin import RedditPlugin
 
 class TestBot(RedditPlugin):
 
-    def __init__(self, handler):
-        super(TestBot, self).__init__('TestBot', handler)
+    def __init__(self):
+        super(TestBot, self).__init__('TestBot')
 
     def act_submission(self, submission):
-        self.logger.debug('SUBMISSION: ' + submission.body)
+        pass
     
     def act_comment(self, comment):
-        self.logger.debug('COMMENT: ' + comment.body)
-
-def init(handler):
-    return TestBot(handler)
+        pass
+        
+def init():
+    return TestBot()

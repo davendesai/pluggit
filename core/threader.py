@@ -1,6 +1,5 @@
 import threading
-
-from config import config
+import logging
 
 class RedditThreader:
     """
@@ -10,11 +9,32 @@ class RedditThreader:
     """
 
     def __init__(self):
-        # Create the necessities
         self.threads = []
-        self.lock = threading.Lock()
-        
-    def start(self, name, target):
+
+        # Create logger
+        self.logger = logging.getLogger('RedditThreader')
+        self.logger.setLevel(logging.INFO)
+
+        # Keep track of currently monitored
+        self.submission_subreddits = []
+        self.comment_subreddits = []
+
+    def thread_exists(self, subreddit, submission = True, comment = True):
+        if submission:
+            if subreddit not in self.submission_subreddits:
+                self.submission_subreddits.append(subreddit)
+                self.logger.info('creating submission thread for {}'.format(subreddit))
+                return False
+
+        if comment:
+            if subreddit not in self.comment_subreddits:
+                self.logger.info('creating comment thread for {}'.format(subreddit))
+                self.comment_subreddits.append(subreddit)
+                return False
+            
+        return True
+
+    def run_thread(self, name, target):
         thread = threading.Thread(name = name, target = target)
         thread.daemon = True
 
@@ -22,7 +42,7 @@ class RedditThreader:
         self.threads.append(thread)
         thread.start()
 
-    def join(self):
+    def join_all_threads(self):
         # Join all threads
         for thread in self.threads:
             thread.join()
