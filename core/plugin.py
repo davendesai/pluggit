@@ -30,30 +30,13 @@ class PluggitPlugin():
         self.submission_subreddits = []
         self.comment_subreddits = []
         
-    def configure(self):
-        # DEBUG statement not strictly necessary, but would be nice...
-        if not hasattr(self.config, 'DEBUG'):
-            self.logger.warning('no debug variable found. maybe a good idea to have one?')
-        elif self.config.DEBUG == 1:
-            self.logger.setLevel(logging.DEBUG)
-            self.logger.debug('debug mode enabled')
-            
-        # Check for most important variables
-        assert hasattr(self.config, 'USER_AGENT'), 'unable to find user agent'
-        assert hasattr(self.config, 'SUBMISSION_SUBREDDITS'), 'unable to find submission subreddits'
-        assert hasattr(self.config, 'COMMENT_SUBREDDITS'), 'unable to find comment subreddits'
-
+    def configure(self, user_agent, sub_subs, com_subs):
         # Create PRAW Reddit API necessities
-        self.reddit_session = praw.Reddit(user_agent = self.config.USER_AGENT, handler = self.handler)
+        self.reddit_session = praw.Reddit(user_agent = user_agent, handler = self.handler)
         
         # Dispense subreddit information
-        subreddits = self.config.SUBMISSION_SUBREDDITS.split(',')
-        self.submission_subreddits = map(str.strip, subreddits)
-        self.logger.debug('monitoring submission on {}'.format(self.submission_subreddits))
-            
-        subreddits = self.config.COMMENT_SUBREDDITS.split(',')
-        self.comment_subreddits = map(str.strip, subreddits)
-        self.logger.debug('monitoring comments on {}'.format(self.comment_subreddits))
+        self.submission_subreddits = map(str.strip, sub_subs.split(','))
+        self.comment_subreddits = map(str.strip, com_subs.split(','))
 
     def submission_loop(self, subreddit):
         stream = praw.helpers.submission_stream(self.reddit_session, subreddit = subreddit, limit = 15)
@@ -63,7 +46,7 @@ class PluggitPlugin():
                 self.act_submission(submission)
         except Exception as e:
             self.logger.error('unable to contact reddit API.')
-            self.logger.error(e)
+            self.logger.error('-----> ' + str(e))
 
     @abstractmethod
     def act_submission(self, submission):

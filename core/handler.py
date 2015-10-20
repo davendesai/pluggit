@@ -30,4 +30,5 @@ class PluggitHandler:
 
     def request(self, request, proxies, timeout, verify, **kwargs):
         pprint(vars(request))
+        pprint(kwargs)
         
