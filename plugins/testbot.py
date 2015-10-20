@@ -1,9 +1,9 @@
-from core.plugin import RedditPlugin
+from core.plugin import PluggitPlugin
 
-class TestBot(RedditPlugin):
+class TestBot(PluggitPlugin):
 
-    def __init__(self):
-        super(TestBot, self).__init__('TestBot')
+    def __init__(self, handler):
+        super(TestBot, self).__init__('TestBot', handler)
 
     def act_submission(self, submission):
         pass
@@ -11,5 +11,5 @@ class TestBot(RedditPlugin):
     def act_comment(self, comment):
         pass
         
-def init():
-    return TestBot()
+def init(handler):
+    return TestBot(handler)

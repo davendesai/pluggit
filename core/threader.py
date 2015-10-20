@@ -1,7 +1,7 @@
 import threading
 import logging
 
-class RedditThreader:
+class PluggitThreader:
     """
     reddit_threader is a way to abstract the separate submission/comment
     threads out and to keep them under control. It takes care of killing
@@ -12,7 +12,7 @@ class RedditThreader:
         self.threads = []
 
         # Create logger
-        self.logger = logging.getLogger('RedditThreader')
+        self.logger = logging.getLogger('PluggitThreader')
         self.logger.setLevel(logging.INFO)
 
         # Keep track of currently monitored
@@ -34,8 +34,8 @@ class RedditThreader:
             
         return True
 
-    def run_thread(self, name, target):
-        thread = threading.Thread(name = name, target = target)
+    def run_thread(self, name, target, argument):
+        thread = threading.Thread(name = name, target = target, args = (argument,))
         thread.daemon = True
 
         # Start thread and keep track of it

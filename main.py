@@ -1,4 +1,4 @@
-from core.controller import RedditBotController
+from core.controller import PluggitController
 
 if __name__ == '__main__':
-    rb = RedditBotController()
+    app = PluggitController()

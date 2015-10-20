@@ -2,12 +2,12 @@ import os
 import logging
 
 import praw
-from praw.handlers import MultiprocessHandler
 
-from threader import RedditThreader
-from plugin import RedditPlugin
+from threader import PluggitThreader
+from handler import PluggitHandler
+from plugin import PluggitPlugin
 
-class RedditBotController:
+class PluggitController:
     """
     reddit_bot is a the skaffolding that makes implementing reddit bots a more
     pleasant experience. Based on your implementation, it will monitor
@@ -17,13 +17,14 @@ class RedditBotController:
     def __init__(self):
         # Create root logger
         logging.basicConfig()
-        self.logger = logging.getLogger('RedditBotController')
+        self.logger = logging.getLogger('PluggitController')
 
         self.logger.setLevel(logging.INFO)
         self.logger.info('logging started')
 
-        # Create the thread manager
-        self.threader = RedditThreader()
+        # Create the global thread manager and network handler
+        self.threader = PluggitThreader()
+        self.handler = PluggitHandler()
 
         # Load plugins
         self.plugins = []
@@ -48,11 +49,11 @@ class RedditBotController:
                     module = getattr(package, plugin_name)
 
                     try:
-                        plugin = module.init()
+                        self.logger.info('detected plugin in {}'.format(filename))
+
+                        plugin = module.init(self.handler)
                         plugin.config = self.load_config(plugin_name)
                         plugin.configure()
-                        
-                        self.logger.info('detected and loaded plugin in {}'.format(filename))
 
                         self.plugins.append(plugin)
                     except Exception as e:
@@ -86,5 +87,6 @@ class RedditBotController:
     def spawn_threads(self):
         for plugin in self.plugins:
             for subreddit in plugin.submission_subreddits:
-                if not self.threader.thread_exists(subreddit, submission = True):
-                    self.threader.run_thread('{} submissions'.format(subreddit), plugin.submission_loop)
+                if not self.threader.thread_exists(subreddit):
+                    self.threader.run_thread('{} submissions'.format(subreddit),
+                                             plugin.submission_loop, subreddit)
