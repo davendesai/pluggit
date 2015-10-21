@@ -1,4 +1,8 @@
 from core.controller import PluggitController
 
 if __name__ == '__main__':
-    app = PluggitController()
+    try:
+        app = PluggitController()
+    except KeyboardInterrupt as e:
+        print 'Goodbye!'
+        exit(-1)

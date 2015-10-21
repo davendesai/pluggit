@@ -1,8 +1,11 @@
 # HEROKU
 
 .env
-.heroku/
 
 # PYTHON
 
 *.pyc
+
+# PROJECT
+
+config/testbot.ini

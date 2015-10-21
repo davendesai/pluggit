@@ -2,6 +2,7 @@ import logging
 from abc import ABCMeta, abstractmethod
 
 import praw
+from OAuth2Util import OAuth2Util
 
 class PluggitPlugin():
     """
@@ -21,22 +22,31 @@ class PluggitPlugin():
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.INFO)
 
-        # Load config from file
-        self.config = None
-
         # Create Reddit API necessities
         self.reddit_session = None
+        self.oauth = None
 
         self.submission_subreddits = []
         self.comment_subreddits = []
         
-    def configure(self, user_agent, sub_subs, com_subs):
+    def configure(self, configfile, user_agent, s_subreddits, c_subreddits):
         # Create PRAW Reddit API necessities
         self.reddit_session = praw.Reddit(user_agent = user_agent, handler = self.handler)
+
+        # Authenticate
+        self.logger.info('<----------> OAUTH2 SETUP <---------->')
+        self.oauth = OAuth2Util(self.reddit_session, configfile = configfile, server_mode = True)
+
+        # Force authentication once, then every hour
+        self.oauth.refresh(force = True)
+        self.logger.info('<----------> OAUTH2 COMPLETE <---------->')
         
         # Dispense subreddit information
-        self.submission_subreddits = map(str.strip, sub_subs.split(','))
-        self.comment_subreddits = map(str.strip, com_subs.split(','))
+        self.submission_subreddits = [subreddit.strip() for subreddit in s_subreddits.split(',')] 
+        self.comment_subreddits = [subreddit.strip() for subreddit in c_subreddits.split(',')]
+
+        # Dispense user stored information
+
 
     def submission_loop(self, subreddit):
         stream = praw.helpers.submission_stream(self.reddit_session, subreddit = subreddit, limit = 15)
@@ -47,6 +57,9 @@ class PluggitPlugin():
         except Exception as e:
             self.logger.error('unable to contact reddit API.')
             self.logger.error('-----> ' + str(e))
+            
+    def comment_loop(self, subreddit):
+        pass
 
     @abstractmethod
     def act_submission(self, submission):
