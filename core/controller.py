@@ -5,10 +5,10 @@ from time import sleep
 from ConfigParser import ConfigParser
 from ConfigParser import Error as ConfigError
 
+import validate
 from threader import PluggitThreader
 from handler import PluggitHandler
 from plugin import PluggitPlugin
-import validate
 
 class PluggitController:
     """
@@ -25,7 +25,7 @@ class PluggitController:
         self.logger.setLevel(logging.INFO)
         self.logger.info('logging started')
 
-        # Create the global thread manager and network handler
+        # Create the global theader and network manager
         self.threader = PluggitThreader()
         self.handler = PluggitHandler()
 
@@ -54,7 +54,7 @@ class PluggitController:
 
                     try:
                         plugin = module.init(self.handler)
-                        self.logger.info('-----> detected plugin in {}'.format(filename))
+                        self.logger.info('-----> detected {} plugin'.format(plugin.name))
                         self.load_plugin_config(plugin, plugin_name)
 
                         self.plugins.append(plugin)
@@ -77,14 +77,14 @@ class PluggitController:
             parser.read(filename)
             
             options = parser.options('app')
-            validate.validate_plugin_config(options)
+            validate.plugin_config(options)
 
             # DEBUG statement not strictly necessary, but would be nice...
+            debug = False
             if 'debug' in options and parser.get('app', 'debug') == '1':
-                plugin.logger.info('entering debug mode')
-                plugin.logger.setLevel(logging.DEBUG)
+                debug = True
             
-            plugin.configure(filename,
+            plugin.configure(filename, debug,
                              parser.get('app', 'user_agent'),
                              parser.get('app', 'submission_subreddits'),
                              parser.get('app', 'comment_subreddits'))
@@ -95,9 +95,5 @@ class PluggitController:
 
     def spawn_threads(self):
         for plugin in self.plugins:
-            for subreddit in plugin.submission_subreddits:
-                print subreddit
-                
-            [self.threader.run_thread(plugin.submission_loop, subreddit) \
-             for subreddit in plugin.submission_subreddits]
-
+            self.threader.run_thread(plugin.submission_loop)
+            self.threader.run_thread(plugin.comment_loop)

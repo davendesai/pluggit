@@ -11,8 +11,8 @@ class PluggitThreader:
     def __init__(self):
         self.threads = []
 
-    def run_thread(self, target, argument):
-        thread = threading.Thread(target = target, args = (argument,))
+    def run_thread(self, target):
+        thread = threading.Thread(target = target)
         thread.daemon = True
 
         # Start thread and keep track of it

@@ -6,6 +6,10 @@
 
 *.pyc
 
+# MONGODB
+
+data/
+
 # PROJECT
 
 config/testbot.ini
