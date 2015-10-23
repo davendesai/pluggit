@@ -2,14 +2,14 @@ from core.plugin import PluggitPlugin
 
 class TestBot(PluggitPlugin):
 
-    def __init__(self, handler):
-        super(TestBot, self).__init__('TestBot', handler)
+    def __init__(self, handler, database):
+        super(TestBot, self).__init__('TestBot', handler, database)
 
-    def act_submission(self, submission):
+    def received_submission(self, submission):
         pass
     
-    def act_comment(self, comment):
+    def received_comment(self, comment):
         pass
         
-def init(handler):
-    return TestBot(handler)
+def init(handler, database):
+    return TestBot(handler, database)

@@ -5,9 +5,11 @@ from time import sleep
 from ConfigParser import ConfigParser
 from ConfigParser import Error as ConfigError
 
-import validate
 from threader import PluggitThreader
 from handler import PluggitHandler
+from database import PluggitDatabase
+
+import validate
 from plugin import PluggitPlugin
 
 class PluggitController:
@@ -25,16 +27,19 @@ class PluggitController:
         self.logger.setLevel(logging.INFO)
         self.logger.info('logging started')
 
-        # Create the global theader and network manager
+        # Create the global theader, network manager, and database
         self.threader = PluggitThreader()
         self.handler = PluggitHandler()
+        self.database = PluggitDatabase()
 
         # Load plugins
         self.plugins = []
         self.load_plugins()
         
         # Let the manager take over...
-        self.spawn_threads()
+        self.process_old()
+        self.start_monitoring()
+        
         while True:
             sleep(5)
             
@@ -53,7 +58,7 @@ class PluggitController:
                     module = getattr(package, plugin_name)
 
                     try:
-                        plugin = module.init(self.handler)
+                        plugin = module.init(self.handler, self.database)
                         self.logger.info('-----> detected {} plugin'.format(plugin.name))
                         self.load_plugin_config(plugin, plugin_name)
 
@@ -93,7 +98,10 @@ class PluggitController:
             e._Error__message = 'no config file found'
             raise
 
-    def spawn_threads(self):
-        for plugin in self.plugins:
-            self.threader.run_thread(plugin.submission_loop)
-            self.threader.run_thread(plugin.comment_loop)
+    def process_old(self):
+        [plugin.process_old_submissions() for plugin in self.plugins]
+        [plugin.process_old_comments() for plugin in self.plugins]
+        
+    def start_monitoring(self):
+        [self.threader.run_thread(plugin.submission_loop) for plugin in self.plugins]
+        [self.threader.run_thread(plugin.comment_loop) for plugin in self.plugins]
