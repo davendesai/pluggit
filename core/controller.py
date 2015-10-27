@@ -34,18 +34,19 @@ class PluggitController:
 
         # Load plugins
         self.plugins = []
-        self.load_plugins()
+        self.discover_plugins()
         
         # Let the manager take over...
         self.process_old()
         self.start_monitoring()
         
+        # Periodically check for keyboard interrupts, etc...
         while True:
             sleep(5)
             
-    def load_plugins(self):
+    def discover_plugins(self):
         self.logger.info('started loading plugins...')
-        path = 'plugins'
+        path = os.path.join(os.path.dirname(__name__), 'plugins')
         
         # Get a list of plugins and keep track of them
         for root, dirs, files in os.walk(path):
@@ -56,16 +57,7 @@ class PluggitController:
                 if file_ext == '.py' and not '__init__' in plugin_name:
                     package = __import__(path, fromlist = [plugin_name])
                     module = getattr(package, plugin_name)
-
-                    try:
-                        plugin = module.init(self.handler, self.database)
-                        self.logger.info('-----> detected {} plugin'.format(plugin.name))
-                        self.load_plugin_config(plugin, plugin_name)
-
-                        self.plugins.append(plugin)
-                    except Exception as e:
-                        self.logger.warning('an error occurred when trying to load {}'.format(filename))
-                        self.logger.warning('-----> ' + str(e))
+                    self.load_plugin(module, plugin_name)
                     
         if len(self.plugins) == 0:
             self.logger.error('no plugins found to load. shutting down...')
@@ -73,6 +65,17 @@ class PluggitController:
 
         self.logger.info('completed loading {} plugin(s)'.format(len(self.plugins)))
 
+    def load_plugin(self, module, plugin_name):
+        try:
+            plugin = module.init(self.handler, self.database)
+            self.logger.info('-----> detected {} plugin'.format(plugin.name))
+            self.load_plugin_config(plugin, plugin_name)
+
+            self.plugins.append(plugin)
+        except Exception as e:
+            self.logger.warning('an error occurred when trying to load {}'.format(plugin_name + '.py'))
+            self.logger.warning('-----> ' + str(e))
+        
     def load_plugin_config(self, plugin, config_name):
         path = 'config/' + config_name.lower() + '.ini'
         filename = os.path.join(os.path.dirname(__name__), path)
@@ -95,7 +98,7 @@ class PluggitController:
                              parser.get('app', 'comment_subreddits'))
 
         except ConfigError as e:
-            e._Error__message = 'no config file found'
+            e._Error__message = 'no appropriate config file found'
             raise
 
     def process_old(self):
@@ -103,5 +106,5 @@ class PluggitController:
         [plugin.process_old_comments() for plugin in self.plugins]
         
     def start_monitoring(self):
-        [self.threader.run_thread(plugin.submission_loop) for plugin in self.plugins]
-        [self.threader.run_thread(plugin.comment_loop) for plugin in self.plugins]
+        [self.threader.run_thread(plugin.monitor_submissions) for plugin in self.plugins]
+        [self.threader.run_thread(plugin.monitor_comments) for plugin in self.plugins]

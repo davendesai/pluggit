@@ -35,65 +35,78 @@ class PluggitPlugin():
         
     def configure(self, configfile, debug, user_agent, s_subreddits, c_subreddits):
         if debug == True:
-            self.logger.info('entering debug mode')
             self.logger.setLevel(logging.DEBUG)
             
         # Create PRAW Reddit API necessities
         self.reddit_session = praw.Reddit(user_agent = user_agent, handler = self.handler)
 
         # Authenticate
-        self.logger.info('<----------> OAUTH2 SETUP <---------->')
         self.oauth = OAuth2Util(self.reddit_session, configfile = configfile, server_mode = True)
 
         # Force authentication once, then every hour
         self.oauth.refresh(force = True)
-        self.logger.info('<----------> OAUTH2 COMPLETE <------->')
+
+        self.logger.info('<----------> OAUTH2 SETUP <---------->')
         
         # Dispense subreddit information
         self.submission_subreddits = [subreddit.strip() for subreddit in s_subreddits.split(',')] 
         self.comment_subreddits = [subreddit.strip() for subreddit in c_subreddits.split(',')]
 
+    def get_stream(self, stream, target, ignore_list):
+        try:
+            [target(item) for item in stream if not item.id in ignore_list]
+        except Exception as e:
+            self.logger.error('an error occurred with item id: {}'.format(item.id))
+            self.logger.error('-----> ' + str(e))
+
     def process_old_submissions(self):
         subreddits = '+'.join(self.submission_subreddits)
         subreddit_obj = self.reddit_session.get_subreddit(subreddits)
 
-        newest_submission = self.database.get_newest_submission(self.name)
-        if newest_submission == None:
-            self.logger.info('first time running this plugin')
+        latest_submission = self.database.get_latest_submission(self.name)
+        if latest_submission == None:
             return
+        latest_id = latest_submission['id']
 
-        self.logger.info('running through old submissions...')
-        submission_list = subreddit_obj.get_new(place_holder = newest_submission, limit = None)
-        [self.act_submission(submission) for submission in submission_list]
+        self.logger.info('<----------> OLD SUBMISSIONS <------->')
 
-    def process_old_comments(self):
-        pass
-        
-    def submission_loop(self):
-        self.logger.info('starting to monitor new submissions...')
+        submission_list = subreddit_obj.get_new(place_holder = latest_id, limit = None)
+        self.get_stream(submission_list, self.act_submission, [latest_id])
+
+    def monitor_submissions(self):
         subreddits = '+'.join(self.submission_subreddits)
-        stream = praw.helpers.submission_stream(self.reddit_session, subreddits, limit = 15)
+        stream = praw.helpers.submission_stream(self.reddit_session, subreddits, limit = 10)
 
-        while True:
-            try:
-                for submission in stream:
-                    self.act_submission(submission)
-            except Exception as e:
-                self.logger.error('an error occurred with submission id: {}'.format(submission.id))
-                self.logger.error('-----> ' + str(e))
+        self.logger.info('<----------> NEW SUBMISSIONS <------->')
+        
+        latest_submissions = self.database.get_many_latest_submissions(self.name)
+
+        # Ignore already processed due to overlap
+        ignore_list = None
+        if not latest_submissions == None:
+            ignore_list = [submission['id'] for submission in latest_submissions]
             
-    def comment_loop(self):
-        pass
-
+        while True:
+            self.get_stream(stream, self.act_submission, ignore_list)
+            
     def act_submission(self, submission):
         self.logger.debug('{}: SUBMISSION: {}'.format(submission.subreddit, submission.title))
-        self.database.store_submission(self.name, submission)
+        self.database.store_latest_submission(self.name, submission)
 
-    def act_comment(self, comment):
-        pass
+        # Pass onto plugin
+        self.received_submission(submission)
 
     @abstractmethod
     def received_submission(self, submission):
+        pass
+            
+    def process_old_comments(self):
+        pass
+            
+    def monitor_comments(self):
+        pass
+
+    def act_comment(self, comment):
         pass
 
     @abstractmethod

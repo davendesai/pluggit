@@ -5,6 +5,8 @@ import pymongo
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, InvalidURI
 
+from models import PluggitSubmission, PluggitComment
+
 class PluggitDatabase:
     """
     database is the single store for all plugins using Pluggit. It provides a
@@ -17,46 +19,54 @@ class PluggitDatabase:
         self.logger = logging.getLogger('PluggitDatabase')
         self.logger.setLevel(logging.INFO)
         
+        # Create client for interfacing with database
         self.mongoclient = None
+
         hostpath = 'mongodb://localhost:27017'
-        #hostpath = os.environ['MONGOLAB_URI']
+        if hasattr(os.environ, 'MONGOLAB_URI'):
+            hostpath = os.environ['MONGOLAB_URI']
 
         try:
-            #mongoengine.connect(name, host = os.environ['MONGOLAB_URI'])
             self.mongoclient = MongoClient(hostpath)
             self.logger.info('database connection initialized')
         except InvalidURI as e:
             self.logger.error('the database URI was malformed. check it please?')
             raise
-        except ConnectionFailure as e:
+        except Exception as e:
             self.logger.error('unable to connect to the database')
-            raise
-
+            exit(-1)
+            
     def __del__(self):
         if not self.mongoclient == None:
             self.mongoclient.close()
         
-    def store_submission(self, name, submission):
-        database = self.mongoclient[name]
-        collection = database.submissions
-
-        data = {}
-        data['id'] = submission.id
-        data['title'] = submission.title
-        data['date'] = submission.created_utc
-
+    def store_submission(self, collection, submission):
+        data = PluggitSubmission(submission).__dict__
         collection.insert_one(data)
-        self.logger.info(' STORED SUB: {}'.format(submission.id))
-
-        # Evict older entries
-        if collection.count() > 5:
-            collection.delete_one(collection.find_one())
-
-    def get_newest_submission(self, name):
+        
+    def store_latest_submission(self, name, submission):
         database = self.mongoclient[name]
-        collection = database.submissions
+        collection = database.latest_submission
+
+        self.store_submission(collection, submission)
+
+        if collection.count() > 15:
+            to_remove = collection.find_one(sort = [('created_utc', pymongo.ASCENDING)])
+            collection.delete_one(to_remove)
+
+    def get_latest_submission(self, name):
+        database = self.mongoclient[name]
+        collection = database.latest_submission
 
         if collection.count() == 0:
             return None
-        return collection.find_one(sort = [('date', pymongo.DESCENDING)])['id']
+        return collection.find_one(sort = [('created_utc', pymongo.DESCENDING)])
+
+    def get_many_latest_submissions(self, name):
+        database = self.mongoclient[name]
+        collection = database.latest_submission
+
+        if collection.count() == 0:
+            return None
+        return collection.find()
         
