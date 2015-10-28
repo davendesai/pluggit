@@ -1,3 +1,4 @@
+import logging
 from time import time, sleep
 
 from requests import Session
@@ -11,6 +12,10 @@ class PluggitHandler:
     """
 
     def __init__(self):
+        # Create logger
+        self.logger = logging.getLogger('PluggitHandler')
+        self.logger.setLevel(logging.DEBUG)
+        
         # Create dict { bearer: last_request_time }
         self.oauth_dict = {}
 
@@ -40,10 +45,10 @@ class PluggitHandler:
                 # Lock to prevent multiple threads requesting from same OAUTH session
                 with self.lock:
                     now = time()
-                    wait_time = self.oauth_dict[oauth_session] + 1 - now
+                    wait_time = self.oauth_dict[oauth_session] + 2 - now
 
                     if wait_time > 0:
-                        print 'have to sleep: ' + str(wait_time)
+                        self.logger.debug(' SESSION: ' + oauth_session + ' SLEEPING: ' + str(wait_time))
                         now += wait_time
                         sleep(wait_time)
                         

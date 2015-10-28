@@ -27,8 +27,12 @@ class PluggitPlugin():
         self.logger.setLevel(logging.INFO)
 
         # Create Reddit API necessities
-        self.reddit_session = None
-        self.oauth = None
+        self.submission_session = None
+        self.comment_session = None
+
+        # Oauth sessions
+        self.submission_oauth = None
+        self.comment_oauth = None
 
         self.submission_subreddits = []
         self.comment_subreddits = []
@@ -38,13 +42,17 @@ class PluggitPlugin():
             self.logger.setLevel(logging.DEBUG)
             
         # Create PRAW Reddit API necessities
-        self.reddit_session = praw.Reddit(user_agent = user_agent, handler = self.handler)
+        self.submission_session = praw.Reddit(user_agent = user_agent + ' Submissions', handler = self.handler)
+        self.comment_session = praw.Reddit(user_agent = user_agent + ' Comments', handler = self.handler)
 
         # Authenticate
-        self.oauth = OAuth2Util(self.reddit_session, configfile = configfile, server_mode = True)
-
+        self.submission_oauth = OAuth2Util(self.submission_session, configfile = configfile, server_mode = True)
+        
         # Force authentication once, then every hour
-        self.oauth.refresh(force = True)
+        self.submission_oauth.refresh(force = True) # Should work for both sessions
+
+        # Just copy the values from the previous authentication
+        self.comment_oauth = OAuth2Util(self.comment_session, configfile = configfile, server_mode = True)
 
         self.logger.info('<----------> OAUTH2 SETUP <---------->')
         
@@ -64,7 +72,7 @@ class PluggitPlugin():
             return
 
         subreddits = '+'.join(self.submission_subreddits)
-        subreddit_obj = self.reddit_session.get_subreddit(subreddits)
+        subreddit_obj = self.submission_session.get_subreddit(subreddits)
 
         latest_submission = self.database.get_latest_submission(self.name)
         if latest_submission == None:
@@ -79,7 +87,7 @@ class PluggitPlugin():
             return
         
         subreddits = '+'.join(self.submission_subreddits)
-        stream = praw.helpers.submission_stream(self.reddit_session, subreddits, limit = 10)
+        stream = praw.helpers.submission_stream(self.submission_session, subreddits, limit = 10)
         
         latest_submissions = self.database.get_many_latest_submissions(self.name)
 
@@ -107,7 +115,7 @@ class PluggitPlugin():
             return
 
         subreddits = '+'.join(self.comment_subreddits)
-        subreddit_obj = self.reddit_session.get_subreddit(subreddits)
+        subreddit_obj = self.comment_session.get_subreddit(subreddits)
 
         latest_comment = self.database.get_latest_comment(self.name)
         if latest_comment == None:
@@ -122,7 +130,7 @@ class PluggitPlugin():
             return
 
         subreddits = '+'.join(self.comment_subreddits)
-        stream = praw.helpers.comment_stream(self.reddit_session, subreddits, limit = 50)
+        stream = praw.helpers.comment_stream(self.comment_session, subreddits, limit = 50)
 
         latest_comments = self.database.get_many_latest_comments(self.name)
 
