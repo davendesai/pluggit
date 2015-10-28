@@ -18,3 +18,6 @@ class PluggitThreader:
         # Start thread and keep track of it
         self.threads.append(thread)
         thread.start()
+
+    def join_all(self):
+        [thread.join() for thread in self.threads]

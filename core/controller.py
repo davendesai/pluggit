@@ -38,6 +38,7 @@ class PluggitController:
         
         # Let the manager take over...
         self.process_old()
+        self.threader.join_all()
         self.start_monitoring()
         
         # Periodically check for keyboard interrupts, etc...
@@ -102,8 +103,8 @@ class PluggitController:
             raise
 
     def process_old(self):
-        [plugin.process_old_submissions() for plugin in self.plugins]
-        [plugin.process_old_comments() for plugin in self.plugins]
+        [self.threader.run_thread(plugin.process_old_submissions) for plugin in self.plugins]
+        [self.threader.run_thread(plugin.process_old_comments) for plugin in self.plugins]
         
     def start_monitoring(self):
         [self.threader.run_thread(plugin.monitor_submissions) for plugin in self.plugins]

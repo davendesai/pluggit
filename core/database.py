@@ -5,6 +5,9 @@ import pymongo
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, InvalidURI
 
+from praw.objects import Submission as PRAWSubmission
+from praw.objects import Comment as PRAWComment
+
 from models import PluggitSubmission, PluggitComment
 
 class PluggitDatabase:
@@ -40,17 +43,24 @@ class PluggitDatabase:
         if not self.mongoclient == None:
             self.mongoclient.close()
         
-    def store_submission(self, collection, submission):
-        data = PluggitSubmission(submission).__dict__
-        collection.insert_one(data)
+    def store_item(self, collection, item):
+        data = None
+        
+        if type(item) == PRAWSubmission:
+            data = PluggitSubmission(item).__dict__
+        elif type(item) == PRAWComment:
+            data = PluggitComment(item).__dict__
+            
+        if not data == None:
+            collection.insert_one(data)
         
     def store_latest_submission(self, name, submission):
         database = self.mongoclient[name]
         collection = database.latest_submission
 
-        self.store_submission(collection, submission)
+        self.store_item(collection, submission)
 
-        if collection.count() > 15:
+        if collection.count() > 25:
             to_remove = collection.find_one(sort = [('created_utc', pymongo.ASCENDING)])
             collection.delete_one(to_remove)
 
@@ -70,3 +80,28 @@ class PluggitDatabase:
             return None
         return collection.find()
         
+    def store_latest_comment(self, name, comment):
+        database = self.mongoclient[name]
+        collection = database.latest_comment
+
+        self.store_item(collection, comment)
+
+        if collection.count() > 75:
+            to_remove = collection.find_one(sort = [('created_utc', pymongo.ASCENDING)])
+            collection.delete_one(to_remove)
+
+    def get_latest_comment(self, name):
+        database = self.mongoclient[name]
+        collection = database.latest_comment
+
+        if collection.count() == 0:
+            return None
+        return collection.find_one(sort = [('created_utc', pymongo.DESCENDING)])
+
+    def get_many_latest_comments(self, name):
+        database = self.mongoclient[name]
+        collection = database.latest_comment
+
+        if collection.count() == 0:
+            return None
+        return collection.find()

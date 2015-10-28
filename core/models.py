@@ -26,6 +26,6 @@ class PluggitSubmission(PluggitModel):
     def __init__(self, submission):
         super(PluggitSubmission, self).__init__(submission)
         
-class PluggitComment:
+class PluggitComment(PluggitModel):
     def __init__(self, comment):
         super(PluggitComment, self).__init__(comment)

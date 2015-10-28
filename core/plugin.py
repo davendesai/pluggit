@@ -58,8 +58,11 @@ class PluggitPlugin():
         except Exception as e:
             self.logger.error('an error occurred with item id: {}'.format(item.id))
             self.logger.error('-----> ' + str(e))
-
+            
     def process_old_submissions(self):
+        if self.submission_subreddits[0] == '':
+            return
+
         subreddits = '+'.join(self.submission_subreddits)
         subreddit_obj = self.reddit_session.get_subreddit(subreddits)
 
@@ -68,21 +71,20 @@ class PluggitPlugin():
             return
         latest_id = latest_submission['id']
 
-        self.logger.info('<----------> OLD SUBMISSIONS <------->')
-
         submission_list = subreddit_obj.get_new(place_holder = latest_id, limit = None)
         self.get_stream(submission_list, self.act_submission, [latest_id])
 
     def monitor_submissions(self):
+        if self.submission_subreddits[0] == '':
+            return
+        
         subreddits = '+'.join(self.submission_subreddits)
         stream = praw.helpers.submission_stream(self.reddit_session, subreddits, limit = 10)
-
-        self.logger.info('<----------> NEW SUBMISSIONS <------->')
         
         latest_submissions = self.database.get_many_latest_submissions(self.name)
 
         # Ignore already processed due to overlap
-        ignore_list = None
+        ignore_list = []
         if not latest_submissions == None:
             ignore_list = [submission['id'] for submission in latest_submissions]
             
@@ -90,7 +92,7 @@ class PluggitPlugin():
             self.get_stream(stream, self.act_submission, ignore_list)
             
     def act_submission(self, submission):
-        self.logger.debug('{}: SUBMISSION: {}'.format(submission.subreddit, submission.title))
+        self.logger.debug('{}: SUBMISSION: {}'.format(submission.subreddit, submission.title[:50] + '...'))
         self.database.store_latest_submission(self.name, submission)
 
         # Pass onto plugin
@@ -101,13 +103,43 @@ class PluggitPlugin():
         pass
             
     def process_old_comments(self):
-        pass
+        if self.comment_subreddits[0] == '':
+            return
+
+        subreddits = '+'.join(self.comment_subreddits)
+        subreddit_obj = self.reddit_session.get_subreddit(subreddits)
+
+        latest_comment = self.database.get_latest_comment(self.name)
+        if latest_comment == None:
+            return
+        latest_id = latest_comment['id']
+
+        comment_list = subreddit_obj.get_comments(place_holder = latest_id, limit = None)
+        self.get_stream(comment_list, self.act_comment, [latest_id])
             
     def monitor_comments(self):
-        pass
+        if self.comment_subreddits[0] == '':
+            return
+
+        subreddits = '+'.join(self.comment_subreddits)
+        stream = praw.helpers.comment_stream(self.reddit_session, subreddits, limit = 50)
+
+        latest_comments = self.database.get_many_latest_comments(self.name)
+
+        # Ignore already processed due to overlap
+        ignore_list = []
+        if not latest_comments == None:
+            ignore_list = [comment['id'] for comment in latest_comments]
+        
+        while True:
+            self.get_stream(stream, self.act_comment, ignore_list)
 
     def act_comment(self, comment):
-        pass
+        self.logger.debug('{}: COMMENT: {}'.format(comment.subreddit, comment.body[:50] + '...'))
+        self.database.store_latest_comment(self.name, comment)
+
+        # Pass onto plugin
+        self.received_comment(comment)
 
     @abstractmethod
     def received_comment(self, comment):
