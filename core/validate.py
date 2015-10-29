@@ -4,6 +4,10 @@ the Pluggit project. It provides a central place to make changes
 rapidly to the necessary configurations files.
 """
 
+def pluggit_config(options):
+    # Check required options
+    pass
+
 def plugin_config(options):
     # Check required options
     assert 'user_agent' in options, 'unable to find user agent in config'

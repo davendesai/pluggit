@@ -4,6 +4,8 @@ from time import time, sleep
 from requests import Session
 from threading import Lock
 
+from SimpleHTTPServer import SimpleHTTPRequestHandler as BasicRequestHandler
+
 class PluggitHandler:
     """
     handler is the global network handler for Pluggit. It routes all network
@@ -11,10 +13,12 @@ class PluggitHandler:
     OAuth requests separate as they are based on a per-user_agent rate-limit.
     """
 
-    def __init__(self):
+    def __init__(self, debug = False):
         # Create logger
         self.logger = logging.getLogger('PluggitHandler')
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.INFO)
+        if debug:
+            self.logger.setLevel(logging.DEBUG)
         
         # Create dict { bearer: last_request_time }
         self.oauth_dict = {}
@@ -61,3 +65,8 @@ class PluggitHandler:
                                  proxies = proxies,
                                  timeout = timeout,
                                  allow_redirects = False, verify = verify)
+
+class PluggitOAuthHandler(BasicRequestHandler):
+
+    def __init__(self):
+        pass

@@ -54,13 +54,13 @@ class PluggitPlugin():
         # Just copy the values from the previous authentication
         self.comment_oauth = OAuth2Util(self.comment_session, configfile = configfile, server_mode = True)
 
-        self.logger.info('<----------> OAUTH2 SETUP <---------->')
+        self.logger.info('completed OAuth setup')
         
         # Dispense subreddit information
         self.submission_subreddits = [subreddit.strip() for subreddit in s_subreddits.split(',')] 
         self.comment_subreddits = [subreddit.strip() for subreddit in c_subreddits.split(',')]
 
-    def get_stream(self, stream, target, ignore_list):
+    def _get_stream(self, stream, target, ignore_list):
         try:
             [target(item) for item in stream if not item.id in ignore_list]
         except Exception as e:
@@ -80,7 +80,7 @@ class PluggitPlugin():
         latest_id = latest_submission['id']
 
         submission_list = subreddit_obj.get_new(place_holder = latest_id, limit = None)
-        self.get_stream(submission_list, self.act_submission, [latest_id])
+        self._get_stream(submission_list, self.act_submission, [latest_id])
 
     def monitor_submissions(self):
         if self.submission_subreddits[0] == '':
@@ -97,7 +97,7 @@ class PluggitPlugin():
             ignore_list = [submission['id'] for submission in latest_submissions]
             
         while True:
-            self.get_stream(stream, self.act_submission, ignore_list)
+            self._get_stream(stream, self.act_submission, ignore_list)
             
     def act_submission(self, submission):
         self.logger.debug('{}: SUBMISSION: {}'.format(submission.subreddit, submission.title[:50] + '...'))
@@ -123,7 +123,7 @@ class PluggitPlugin():
         latest_id = latest_comment['id']
 
         comment_list = subreddit_obj.get_comments(place_holder = latest_id, limit = None)
-        self.get_stream(comment_list, self.act_comment, [latest_id])
+        self._get_stream(comment_list, self.act_comment, [latest_id])
             
     def monitor_comments(self):
         if self.comment_subreddits[0] == '':
@@ -140,7 +140,7 @@ class PluggitPlugin():
             ignore_list = [comment['id'] for comment in latest_comments]
         
         while True:
-            self.get_stream(stream, self.act_comment, ignore_list)
+            self._get_stream(stream, self.act_comment, ignore_list)
 
     def act_comment(self, comment):
         self.logger.debug('{}: COMMENT: {}'.format(comment.subreddit, comment.body[:50] + '...'))

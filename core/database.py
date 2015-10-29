@@ -17,10 +17,12 @@ class PluggitDatabase:
     for Pluggit to work regardless of network or system fluctuations.
     """
 
-    def __init__(self):
+    def __init__(self, debug = False):
         # Create logger
         self.logger = logging.getLogger('PluggitDatabase')
         self.logger.setLevel(logging.INFO)
+        if debug:
+            self.logger.setLevel(logging.DEBUG)
         
         # Create client for interfacing with database
         self.mongoclient = None
@@ -43,26 +45,33 @@ class PluggitDatabase:
         if not self.mongoclient == None:
             self.mongoclient.close()
         
-    def store_item(self, collection, item):
+    def _store_item(self, collection, item):
         data = None
+        data_type = 'Unknown'
         
         if type(item) == PRAWSubmission:
             data = PluggitSubmission(item).__dict__
+            data_type = 'Submission'
         elif type(item) == PRAWComment:
             data = PluggitComment(item).__dict__
+            data_type = 'Comment'
             
         if not data == None:
             collection.insert_one(data)
+            self.logger.debug(' COLLECTION: ' + collection.name +
+                              ' INSERTED: ' + data_type + ' WITH ID: ' + data['id'])
         
     def store_latest_submission(self, name, submission):
         database = self.mongoclient[name]
         collection = database.latest_submission
 
-        self.store_item(collection, submission)
+        self._store_item(collection, submission)
 
         if collection.count() > 25:
             to_remove = collection.find_one(sort = [('created_utc', pymongo.ASCENDING)])
             collection.delete_one(to_remove)
+            self.logger.debug(' COLLECTION: ' + collection.name +
+                              ' DELETED: ' + 'Submission' + ' WITH ID: ' + to_remove['id'])
 
     def get_latest_submission(self, name):
         database = self.mongoclient[name]
@@ -84,11 +93,13 @@ class PluggitDatabase:
         database = self.mongoclient[name]
         collection = database.latest_comment
 
-        self.store_item(collection, comment)
+        self._store_item(collection, comment)
 
         if collection.count() > 75:
             to_remove = collection.find_one(sort = [('created_utc', pymongo.ASCENDING)])
             collection.delete_one(to_remove)
+            self.logger.debug(' COLLECTION: ' + collection.name +
+                              ' DELETED: ' + 'Comment' + ' WITH ID: ' + to_remove['id'])
 
     def get_latest_comment(self, name):
         database = self.mongoclient[name]

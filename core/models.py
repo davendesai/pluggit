@@ -10,10 +10,10 @@ class PluggitModel:
     __metaclass__ = ABCMeta
 
     def __init__(self, obj):
-        [self.create_field(key, value) for key, value in obj.__dict__.iteritems() \
+        [self._create_field(key, value) for key, value in obj.__dict__.iteritems() \
          if not key[0] == '_' and not callable(value)]
         
-    def create_field(self, key, value):
+    def _create_field(self, key, value):
         if key == 'reddit_session':
             return
         # Excludes for submissions
